@@ -93,21 +93,6 @@ export default {
             height: '0',
           },
         },
-        'sos-blink': {
-            /* S */
-            '0%, 3%, 6%, 9%, 12%, 15%': { backgroundColor: 'white' },
-            '1.5%, 4.5%, 7.5%, 10.5%, 13.5%, 18%': { backgroundColor: 'black' },
-            
-            /* O */
-            '21%, 27%, 33%, 39%': { backgroundColor: 'white' },
-            '24%, 30%, 36%, 42%': { backgroundColor: 'black' },
-            
-            /* S */
-            '45%, 48%, 51%, 54%, 57%, 60%': { backgroundColor: 'white' },
-            '46.5%, 49.5%, 52.5%, 55.5%, 58.5%, 63%': { backgroundColor: 'black' },
-        
-            '100%': { backgroundColor: 'black' },
-        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',

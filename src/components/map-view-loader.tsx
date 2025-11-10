@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import { groups, groupChats } from '@/lib/groups-data';
 import { savedRoutes } from '@/lib/routes-data';
 import { useAppContext } from './app-provider';
-import { Button } from './ui/button';
-import { X } from 'lucide-react';
 
 // Fix for default icon not showing in Leaflet
 const DefaultIcon = L.icon({
@@ -23,17 +21,20 @@ const DefaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-L.Marker.prototype.options.icon = DefaultIcon;
-
 const createRemoveOverlayButton = (id: string, removeMapOverlay: (id: string) => void) => {
   const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
   container.style.backgroundColor = 'white';
   container.style.padding = '5px';
-  container.innerHTML = `<button id="remove-overlay-${id}" title="Удалить зону поиска" class="flex items-center justify-center w-full h-full"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`;
-  container.onclick = (e) => {
+  container.style.cursor = 'pointer';
+  container.title = 'Удалить зону поиска';
+  
+  const buttonContent = L.DomUtil.create('div', 'flex items-center justify-center w-full h-full', container);
+  buttonContent.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+
+  L.DomEvent.on(container, 'click', (e) => {
       e.stopPropagation();
       removeMapOverlay(id);
-  };
+  });
   return container;
 };
 
@@ -41,48 +42,54 @@ export default function MapViewLoader({ centerOn }: { centerOn?: [number, number
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlaysRef = useRef<Map<string, L.Layer>>(new Map());
-  const { setView, mapOverlays, removeMapOverlay } = useAppContext();
+  const { setView, mapOverlays, removeMapOverlay, viewProps } = useAppContext();
+  const currentCenterOn = viewProps.centerOn as [number, number] | undefined || centerOn;
 
-  const createStartPopupContent = (route: (typeof savedRoutes)[0]) => {
+
+  const createStartPopupContent = useCallback((route: (typeof savedRoutes)[0]) => {
     const associatedGroup = groups.find(g => route.name.includes(g.name.split(' ')[0]));
     const hasChat = associatedGroup && groupChats[associatedGroup.id];
   
-    const popupContent = `
-      <div class="font-bold text-base">${route.name} (старт)</div>
-      <div class="text-sm">Сложность: ${route.difficulty}</div>
-      <div class="text-sm">Расстояние: ${route.distance}</div>
-      <div class="text-sm">Время: ${route.time}</div>
-      <div class="text-sm">Высота: ${route.altitude}</div>
-      ${hasChat ? `<button id="chat-btn-${associatedGroup.id}" class="text-blue-600 hover:underline cursor-pointer mt-2">Перейти в чат</button>` : ''}
-    `;
-
     const container = L.DomUtil.create('div');
-    container.innerHTML = popupContent;
+    
+    const title = L.DomUtil.create('div', 'font-bold text-base', container);
+    title.innerText = `${route.name} (старт)`;
+
+    const createTextLine = (text: string) => {
+        const p = L.DomUtil.create('div', 'text-sm', container);
+        p.innerText = text;
+    };
+    
+    createTextLine(`Сложность: ${route.difficulty}`);
+    createTextLine(`Расстояние: ${route.distance}`);
+    createTextLine(`Время: ${route.time}`);
+    createTextLine(`Высота: ${route.altitude}`);
 
     if (hasChat && associatedGroup) {
-        const btn = container.querySelector(`#chat-btn-${associatedGroup.id}`);
-        if(btn) {
-            btn.addEventListener('click', () => {
-                setView('chat', { groupId: associatedGroup.id });
-            })
-        }
+        const btn = L.DomUtil.create('button', 'text-blue-600 hover:underline cursor-pointer mt-2', container);
+        btn.innerText = 'Перейти в чат';
+        L.DomEvent.on(btn, 'click', () => {
+            setView('chat', { groupId: associatedGroup.id });
+        });
     }
 
     return container;
-  };
+  }, [setView]);
 
-  const createEndPopupContent = (route: (typeof savedRoutes)[0]) => {
+  const createEndPopupContent = useCallback((route: (typeof savedRoutes)[0]) => {
     const container = L.DomUtil.create('div');
-    container.innerHTML = `<div class="font-bold text-base">${route.name} (финиш)</div>`;
+    
+    const title = L.DomUtil.create('div', 'font-bold text-base', container);
+    title.innerText = `${route.name} (финиш)`;
     
     const button = L.DomUtil.create('p', 'text-blue-600 hover:underline cursor-pointer mt-2', container);
     button.innerText = "К началу маршрута";
-    button.addEventListener('click', () => {
+    L.DomEvent.on(button, 'click', () => {
         setView('map', { centerOn: route.path[0] });
     });
 
     return container;
-  };
+  }, [setView]);
 
   // Initialize map
   useEffect(() => {
@@ -101,12 +108,12 @@ export default function MapViewLoader({ centerOn }: { centerOn?: [number, number
 
           const startCoords = route.path[0];
           const startPopupContent = createStartPopupContent(route);
-          L.marker(startCoords).addTo(map).bindPopup(startPopupContent);
+          L.marker(startCoords, { icon: DefaultIcon }).addTo(map).bindPopup(startPopupContent);
             
           if (route.path.length > 1) {
             const endCoords = route.path[route.path.length - 1];
             const endPopupContent = createEndPopupContent(route);
-            L.marker(endCoords).addTo(map).bindPopup(endPopupContent);
+            L.marker(endCoords, { icon: DefaultIcon }).addTo(map).bindPopup(endPopupContent);
           }
         }
       });
@@ -118,14 +125,14 @@ export default function MapViewLoader({ centerOn }: { centerOn?: [number, number
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [createEndPopupContent, createStartPopupContent]);
 
   // Handle centering
   useEffect(() => {
-    if (mapRef.current && centerOn) {
-        mapRef.current.setView(centerOn, 13);
+    if (mapRef.current && currentCenterOn) {
+        mapRef.current.setView(currentCenterOn, 13);
     }
-  }, [centerOn]);
+  }, [currentCenterOn]);
 
   // Handle overlays
   useEffect(() => {
@@ -158,12 +165,13 @@ export default function MapViewLoader({ centerOn }: { centerOn?: [number, number
           }
 
           // Custom control to remove the polygon
-          const customControl = new (L.Control.extend({
+          const CustomControl = L.Control.extend({
             onAdd: function() {
               return createRemoveOverlayButton(overlay.id, removeMapOverlay);
             },
             onRemove: function() {}
-          }))({ position: 'topright' });
+          });
+          const customControl = new CustomControl({ position: 'topright' });
 
           customControl.addTo(map);
           

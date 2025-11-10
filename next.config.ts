@@ -22,7 +22,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  transpilePackages: ['react-leaflet'],
+  experimental: {
+    allowedDevOrigins: [
+      'https://6000-firebase-studio-1761638951887.cluster-utvmpwb6ojhlcsay7va6s7qkck.cloudworkstations.dev',
+    ],
+  },
 };
 
 export default process.env.NODE_ENV === 'production' ? withBundleAnalyzer(nextConfig) : nextConfig;

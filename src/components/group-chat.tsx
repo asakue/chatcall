@@ -28,6 +28,12 @@ export default function GroupChat() {
   const { toast } = useToast();
   const [, setForceUpdate] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (activeGroupId && activeGroupId !== selectedGroupId) {
+      setSelectedGroupId(activeGroupId);
+    }
+  }, [activeGroupId, selectedGroupId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,9 +106,12 @@ export default function GroupChat() {
         <CardContent className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
             {initialGroupChats[selectedGroupId] &&
-              initialGroupChats[selectedGroupId].messages.map((message) => (
+              initialGroupChats[selectedGroupId].messages.map((message, index) => {
+                const isLastMessage = index === initialGroupChats[selectedGroupId].messages.length - 1;
+                return (
                 <div
                   key={message.id}
+                  ref={isLastMessage ? messagesEndRef : null}
                   className={cn(
                     'flex items-end gap-2',
                     message.isSender ? 'justify-end' : 'justify-start'
@@ -141,8 +150,7 @@ export default function GroupChat() {
                     </p>
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+              )})}
           </div>
         </CardContent>
 

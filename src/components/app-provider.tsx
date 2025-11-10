@@ -21,8 +21,8 @@ type MapOverlay = {
 type AppContextType = {
   activeView: View;
   setActiveView: (view: View) => void;
-  viewProps: any;
-  setView: (view: View, props?: any) => void;
+  viewProps: Record<string, unknown>;
+  setView: (view: View, props?: Record<string, unknown>) => void;
   activeGroupId?: string;
   setActiveGroupId: (id: string | undefined) => void;
   mapOverlays: MapOverlay[];
@@ -35,13 +35,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [activeView, setActiveView] = useState<View>('map');
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>();
-  const [viewProps, setViewProps] = useState<any>({});
+  const [viewProps, setViewProps] = useState<Record<string, unknown>>({});
   const [mapOverlays, setMapOverlays] = useState<MapOverlay[]>([]);
 
-  const setView = (view: View, props: any = {}) => {
+  const setView = (view: View, props: Record<string, unknown> = {}) => {
     setActiveView(view);
     setViewProps(props);
-    if (props.groupId) {
+    if (props.groupId && typeof props.groupId === 'string') {
       setActiveGroupId(props.groupId);
     }
   };
