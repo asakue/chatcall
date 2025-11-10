@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: 'Трекер "Лесной дозор"',
   description:
     'Отслеживайте свои приключения, оставайтесь на связи и обеспечивайте безопасность на природе.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
